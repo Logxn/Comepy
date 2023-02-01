@@ -5,7 +5,7 @@ from getpass import getpass
 from colorama import *
 from comdirect import Comdirect
 
-NAMESPACE = 'comdirect-manager'
+NAMESPACE = 'comdirect-manager-dev'
 
 INFO = Fore.CYAN
 HIGHLIGHT = Fore.MAGENTA
@@ -49,8 +49,8 @@ def __ask_for_access_number() -> str:
 def __ask_for_personal_pin() -> str:
     personal_pin = ''
     while len(personal_pin) != 6:
-        personal_pin = getpass(
-            f'[\N{key}] {INFO}Please provide the 6-digit {HIGHLIGHT}personal pin {INFO}(Input hidden):{RESET} ')
+        print(f'[\N{key}] {INFO}Please provide the 6-digit {HIGHLIGHT}personal pin {INFO}(Input hidden):{RESET} ', end='')
+        personal_pin = getpass('')
 
     return personal_pin
 
