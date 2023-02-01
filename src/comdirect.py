@@ -32,12 +32,31 @@ class Comdirect:
         self.__ACTIVATE_TAN_ENDPOINT = self.__COM_BASEURL
 
         self.__request_client = RequestClient()
-        self.__endpoint_access_token = None
-        self.__endpoint_refresh_token = None
-        self.__get_token()
+        self.__endpoint_access_token = keyring.get_password(NAMESPACE, 'access_token')
+        self.__endpoint_refresh_token = keyring.get_password(NAMESPACE, 'refresh_token')
+        self.__endpoint_token_expires_in = keyring.get_password(NAMESPACE, 'expires_in')
 
-        self.kunden_nummer = None
-        self.session_id = None
+        self.kunden_nummer = keyring.get_password(NAMESPACE, 'kundennummer')
+        self.session_id = keyring.get_password(NAMESPACE, 'session_id')
+
+        self.__check_token_information()
+
+    def __check_token_information(self):
+        if not self.__endpoint_access_token or not self.__endpoint_refresh_token or not self.__endpoint_token_expires_in or not self.kunden_nummer:
+            return self.__get_token()
+
+        current_timestamp = round(time.time() * 1000)
+        expiry_timestamp = int(self.__endpoint_token_expires_in)
+
+        if current_timestamp > expiry_timestamp:
+            print(f'[\N{key}] {INFO}New login for <{self.kunden_nummer}> required!')
+            return self.__get_token()
+
+        print(f'[\N{key}] {INFO}Logged in with <{self.kunden_nummer}>!')
+
+        scheduler = BlockingScheduler()
+        scheduler.add_job(self.__refresh_token, 'interval', seconds=((expiry_timestamp / 1000) - 10))
+        scheduler.start()
 
     def __get_token(self):
         data = {
@@ -87,6 +106,7 @@ class Comdirect:
         content = json.loads(content_decoded)
 
         self.session_id = content[0]['identifier']
+        keyring.set_password(NAMESPACE, 'session_id', self.session_id)
 
         # Updating the endpoint here, since this is the first time our session_id is known.
         self.__SESSION_VALIDATE_ENDPOINT += f"/api/session/clients/{self.__client_id}/v1/sessions/{self.session_id}/validate"
@@ -166,13 +186,19 @@ class Comdirect:
         content = json.loads(content_decoded)
 
         access_token = content['access_token']
+        refresh_token = content['refresh_token']
+        expires_in = content['expires_in']
+        kunden_nummer = content['kdnr']
+
         self.__endpoint_access_token = access_token
         self.__request_client.update_headers(access_token)
-
-        refresh_token = content['refresh_token']
         self.__endpoint_refresh_token = refresh_token
+        self.kunden_nummer = kunden_nummer
 
-        expires_in = content['expires_in']
+        keyring.set_password(NAMESPACE, 'access_token', self.__endpoint_access_token)
+        keyring.set_password(NAMESPACE, 'refresh_token', self.__endpoint_refresh_token)
+        keyring.set_password(NAMESPACE, 'expires_in', str(round((expires_in * 1000) + (time.time() * 1000))))
+        keyring.set_password(NAMESPACE, 'kundennummer', self.kunden_nummer)
 
         print(f'[\N{key}] {SUCCESS}Logged in with customer number <{self.kunden_nummer}>! {HIGHLIGHT} => {access_token} \N{sparkles}')
 
