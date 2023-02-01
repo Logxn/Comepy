@@ -200,7 +200,7 @@ class Comdirect:
         keyring.set_password(NAMESPACE, 'expires_in', str(round((expires_in * 1000) + (time.time() * 1000))))
         keyring.set_password(NAMESPACE, 'kundennummer', self.kunden_nummer)
 
-        print(f'[\N{key}] {SUCCESS}Logged in with customer number <{self.kunden_nummer}>! {HIGHLIGHT} => {access_token} \N{sparkles}')
+        print(f'[\N{key}] {SUCCESS}Logged in with customer number <{self.kunden_nummer}>!')
 
         # Start the timer to refresh the token
         # Token is valid for 9,98 Minutes
@@ -228,8 +228,13 @@ class Comdirect:
         content = json.loads(content_decoded)
 
         access_token = content['access_token']
+        refresh_token = content['refresh_token']
+        expires_in = content['expires_in']
+
         self.__endpoint_access_token = access_token
         self.__request_client.update_headers(access_token)
-
-        refresh_token = content['refresh_token']
         self.__endpoint_refresh_token = refresh_token
+
+        keyring.set_password(NAMESPACE, 'access_token', self.__endpoint_access_token)
+        keyring.set_password(NAMESPACE, 'refresh_token', self.__endpoint_refresh_token)
+        keyring.set_password(NAMESPACE, 'expires_in', str(round((expires_in * 1000) + (time.time() * 1000))))
