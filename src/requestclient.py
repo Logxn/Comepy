@@ -78,3 +78,11 @@ class RequestClient:
         response = r.patch(url, json=json_data, headers=sending_headers)
 
         return response
+
+    def delete(self, url):
+        sending_headers = self.default_headers
+        sending_headers['Authorization'] = self.auth_headers['Authorization']
+
+        response = r.delete(url, headers=sending_headers)
+
+        return response

@@ -5,7 +5,7 @@ from getpass import getpass
 from colorama import *
 from comdirect import Comdirect
 
-NAMESPACE = 'comdirect-manager-dev'
+NAMESPACE = 'comdirect-manager'
 
 INFO = Fore.CYAN
 HIGHLIGHT = Fore.MAGENTA
@@ -109,6 +109,8 @@ def main():
 
     com = Comdirect()
     
+    #if com.logout():
+     #   print(f'[\N{sparkles}] {SUCCESS}Sucessfully logged out!')
 
 
 if __name__ == '__main__':

@@ -4,7 +4,7 @@ import sys
 import json
 import time
 from requestclient import RequestClient
-from apscheduler.schedulers.background import BlockingScheduler
+from apscheduler.schedulers.background import BackgroundScheduler
 from colorama import *
 
 NAMESPACE = 'comdirect-manager'
@@ -27,6 +27,7 @@ class Comdirect:
         self.__COM_BASEURL = 'https://api.comdirect.de'
         self.__OAUTH_ENDPOINT = self.__COM_BASEURL + '/oauth'
         self.__TOKEN_ENDPOINT = self.__OAUTH_ENDPOINT + '/token'
+        self.__REVOKE_ENDPOINT = self.__OAUTH_ENDPOINT + '/revoke'
         self.__SESSIONS_STATUS_ENDPONT = self.__COM_BASEURL + f'/api/session/clients/{self.__client_id}/v1/sessions'
         self.__SESSION_VALIDATE_ENDPOINT = self.__COM_BASEURL
         self.__ACTIVATE_TAN_ENDPOINT = self.__COM_BASEURL
@@ -53,8 +54,9 @@ class Comdirect:
             return self.__get_token()
 
         print(f'[\N{key}] {INFO}Logged in with <{self.kunden_nummer}>!')
+        self.__refresh_token()
 
-        scheduler = BlockingScheduler()
+        scheduler = BackgroundScheduler()
         scheduler.add_job(self.__refresh_token, 'interval', seconds=((expiry_timestamp / 1000) - 10))
         scheduler.start()
 
@@ -205,7 +207,7 @@ class Comdirect:
         # Start the timer to refresh the token
         # Token is valid for 9,98 Minutes
         # We will still update the token a little bit earlier
-        scheduler = BlockingScheduler()
+        scheduler = BackgroundScheduler()
         scheduler.add_job(self.__refresh_token, 'interval', seconds=(expires_in - 10))
         scheduler.start()
 
@@ -238,3 +240,16 @@ class Comdirect:
         keyring.set_password(NAMESPACE, 'access_token', self.__endpoint_access_token)
         keyring.set_password(NAMESPACE, 'refresh_token', self.__endpoint_refresh_token)
         keyring.set_password(NAMESPACE, 'expires_in', str(round((expires_in * 1000) + (time.time() * 1000))))
+
+    def logout(self) -> bool:
+        response = self.__request_client.delete(self.__REVOKE_ENDPOINT)
+
+        if response.status_code != 204:
+            print(f'[\N{cross mark}] {ERR}Failed to logout! ({response.status_code})')
+            return False
+
+        keyring.delete_password(NAMESPACE, 'access_token')
+        keyring.delete_password(NAMESPACE, 'refresh_token')
+        keyring.delete_password(NAMESPACE, 'expires_in')
+
+        return True
